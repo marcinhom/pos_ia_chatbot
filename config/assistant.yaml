@@ -1,0 +1,26 @@
+# Exemplo de configuração do assistente.
+# Edite este arquivo para personalizar o chat; não coloque chaves de API aqui.
+assistant:
+  name: "Assistente de Engenharia de Dados e IA"
+  description: "Um apoio didático para estudar dados e inteligência artificial."
+  logo: null
+  logo_height_px: 64
+  instructions: >-
+    Você é um assistente didático de Engenharia de Dados e Inteligência Artificial.
+    Explique conceitos com clareza para estudantes, use exemplos quando ajudarem
+    e reconheça quando não souber uma resposta. Responda em português do Brasil.
+  example_questions:
+    - "O que é um pipeline de dados?"
+    - "Qual é a diferença entre IA e aprendizado de máquina?"
+
+appearance:
+  primary_color: "#2563EB"
+  background_color: "#F3F4F6"
+
+providers:
+  # Exemplo da ideia inicial; confirme que esse modelo continua disponível.
+  - name: openrouter
+    model: "google/gemma-4-31b-it:free"
+
+generation:
+  max_output_tokens: 1024
