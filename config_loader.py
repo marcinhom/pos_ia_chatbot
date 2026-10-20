@@ -150,6 +150,10 @@ _LeitorEstrito.add_constructor(
 
 
 def _ler_yaml(caminho: Path) -> Any:
+    # Verificação explícita: no Windows, ler uma pasta levanta PermissionError
+    # (e não IsADirectoryError, como no Linux).
+    if caminho.is_dir():
+        raise ConfigError([f"{caminho} é uma pasta, não um arquivo YAML."])
     try:
         texto = caminho.read_text(encoding="utf-8")
     except FileNotFoundError:
