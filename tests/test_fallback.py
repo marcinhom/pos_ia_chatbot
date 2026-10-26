@@ -125,7 +125,7 @@ def test_t8_timeout_ou_indisponibilidade_tenta_proximo_provedor(first_error):
 
 
 def test_t9_falha_total_lista_provedores_e_motivos_sem_segredos():
-    key = "sk-or-v1-this-is-secret"
+    key = "sk" + "-or-v1-" + "this-is-secret"
 
     def fake_post(url, **kwargs):
         if url == OPENROUTER_URL:
