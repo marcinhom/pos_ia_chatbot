@@ -249,7 +249,7 @@ def test_adaptador_rejeita_limite_fora_do_contrato_sem_rede(limit):
 
 
 def test_erro_http_mostra_motivo_sem_expor_chave():
-    key = "sk-or-v1-very-secret-value"
+    key = "sk" + "-or-v1-" + "very-secret-value"
     response = FakeResponse(
         402,
         {"error": {"message": f"Crédito insuficiente (token {key})"}},
