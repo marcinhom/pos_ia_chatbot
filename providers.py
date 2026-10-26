@@ -1,14 +1,10 @@
-"""Adaptadores HTTP independentes para OpenRouter, Anthropic e OpenAI.
-
-Este módulo não lê variáveis de ambiente nem decide a ordem de fallback.
-O chamador entrega a chave do provedor escolhido; o fallback será tratado
-pela camada de orquestração da tarefa seguinte.
-"""
+"""Adaptadores HTTP e fallback para OpenRouter, Anthropic e OpenAI."""
 
 from __future__ import annotations
 
 import re
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 import requests
@@ -324,4 +320,139 @@ def call_provider(
         timeout=timeout,
         http_post=http_post,
     )
+
+
+@dataclass(frozen=True)
+class ProviderResult:
+    """Resposta do provedor que funcionou; permite à interface informar a origem."""
+
+    text: str
+    provider: str
+
+
+class NoAvailableProvidersError(ProviderError):
+    """Nenhum dos provedores configurados tem uma chave disponível."""
+
+    def __init__(self, required_secrets: Sequence[str]):
+        self.required_secrets = tuple(required_secrets)
+        if self.required_secrets:
+            names = ", ".join(self.required_secrets)
+            message = (
+                "Nenhum provedor configurado tem chave. Adicione pelo menos um destes "
+                f"Secrets nas configurações do Hugging Face Space: {names}."
+            )
+        else:
+            message = "Nenhum provedor está configurado para uso."
+        super().__init__("nenhum", message)
+
+
+@dataclass(frozen=True)
+class ProviderFailure:
+    provider: str
+    reason: str
+
+
+class AllProvidersFailedError(ProviderError):
+    """Todos os provedores com chave falharam; contém motivos já sanitizados."""
+
+    def __init__(self, failures: Sequence[ProviderFailure]):
+        self.failures = tuple(failures)
+        details = "\n".join(f"- {_provider_label(f.provider)}: {f.reason}" for f in self.failures)
+        super().__init__("todos", "Não foi possível obter uma resposta. Falhas encontradas:\n" + details)
+
+
+_PROVIDER_LABELS = {
+    "openrouter": "OpenRouter",
+    "anthropic": "Anthropic",
+    "openai": "OpenAI",
+}
+_PROVIDER_SECRETS = {
+    "openrouter": "OPENROUTER_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+}
+
+
+def _provider_label(provider: str) -> str:
+    return _PROVIDER_LABELS.get(provider, provider)
+
+
+def _provider_value(item: Any, field: str) -> Any:
+    if isinstance(item, Mapping):
+        return item.get(field)
+    return getattr(item, field, None)
+
+
+def _failure_reason(error: ProviderError) -> str:
+    """Traduz os erros mais comuns e mantém detalhes úteis sem revelar credenciais."""
+    status = error.status_code
+    detail = _redact(error.message, "")
+    if status == 401:
+        return "chave inválida ou sem autenticação (HTTP 401)."
+    if status == 402:
+        return "sem crédito ou saldo insuficiente (HTTP 402)."
+    if status == 403:
+        return "acesso negado para esta conta, modelo ou operação (HTTP 403)."
+    if status == 429:
+        return "limite de uso atingido; tente novamente mais tarde (HTTP 429)."
+    if status is not None and status >= 500:
+        return f"provedor temporariamente indisponível (HTTP {status})."
+    if status is not None:
+        return f"o provedor recusou a solicitação (HTTP {status}): {detail}"
+    return detail
+
+
+def call_with_fallback(
+    providers: Sequence[Any],
+    api_keys: Mapping[str, str | None],
+    system_prompt: str,
+    messages: Sequence[Mapping[str, Any]],
+    max_output_tokens: int,
+    *,
+    timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    http_post: HttpPost | None = None,
+) -> ProviderResult:
+    """Tenta, na ordem configurada, somente provedores com a própria chave.
+
+    ``providers`` aceita os objetos ProviderConfig ou dicionários do YAML.
+    ``api_keys`` mapeia os nomes de provedor a valores vindos dos Secrets.
+    """
+    eligible: list[tuple[str, str, str]] = []
+    required_secrets: list[str] = []
+    for item in providers:
+        name = _provider_value(item, "name")
+        model = _provider_value(item, "model")
+        if not isinstance(name, str):
+            continue
+        secret_name = _PROVIDER_SECRETS.get(name)
+        key = api_keys.get(name)
+        if not isinstance(key, str) or not key.strip():
+            if secret_name and secret_name not in required_secrets:
+                required_secrets.append(secret_name)
+            continue
+        if isinstance(model, str) and model.strip():
+            eligible.append((name, key, model))
+
+    if not eligible:
+        raise NoAvailableProvidersError(required_secrets)
+
+    failures: list[ProviderFailure] = []
+    for name, key, model in eligible:
+        try:
+            answer = call_provider(
+                name,
+                key,
+                model,
+                system_prompt,
+                messages,
+                max_output_tokens,
+                timeout=timeout,
+                http_post=http_post,
+            )
+            return ProviderResult(text=answer, provider=name)
+        except ProviderError as error:
+            failures.append(ProviderFailure(name, _failure_reason(error)))
+
+    raise AllProvidersFailedError(failures)
+
 
