@@ -1,0 +1,43 @@
+name: Validacao CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    name: Validar configuração, testes e segredos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código e o histórico Git
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Instalar dependências de validação
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Validar a configuração do assistente
+        run: python config_loader.py
+
+      - name: Executar testes automatizados
+        run: python -m pytest -q
+
+      - name: Procurar chaves e tokens no repositório
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
