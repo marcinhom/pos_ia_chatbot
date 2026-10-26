@@ -71,7 +71,7 @@ O app aceitará credenciais dos três provedores — OpenRouter, Anthropic e Ope
 
 ### Situação verificada no GitHub
 
-O repositório GitHub encontrado para este projeto é [`marcinhom/pos_ia_chatbot`](https://github.com/marcinhom/pos_ia_chatbot), branch padrão `main`. Na data desta especificação, o repositório está vazio; portanto, ainda não há arquivos ou diretórios reais para comparar com a proposta. O destino informado para publicação no Hugging Face é `marciomrcunha/pos_ia_chatbot`. Os identificadores do GitHub e do Hugging Face são diferentes e devem ser tratados como repositórios de serviços distintos. A estrutura abaixo é uma estrutura inicial sugerida pela spec, não uma descrição de arquivos já existentes. A primeira tarefa deve confirmar o repositório/branch GitHub de trabalho e criar ou ajustar essa estrutura sem substituir arquivos preexistentes.
+O repositório GitHub encontrado para este projeto é [`marcinhom/pos_ia_chatbot`](https://github.com/marcinhom/pos_ia_chatbot), branch padrão `main`. Na data desta especificação, o repositório está vazio; portanto, ainda não há arquivos ou diretórios reais para comparar com a proposta. O destino informado para publicação no Hugging Face é `marciomrcunha/chatbot_IA`. Os identificadores do GitHub e do Hugging Face são diferentes e devem ser tratados como repositórios de serviços distintos. A estrutura abaixo é uma estrutura inicial sugerida pela spec, não uma descrição de arquivos já existentes. A primeira tarefa deve confirmar o repositório/branch GitHub de trabalho e criar ou ajustar essa estrutura sem substituir arquivos preexistentes.
 
 ### Estrutura proposta
 
@@ -183,16 +183,16 @@ Os testes automatizados devem usar HTTP simulado e valores de chave falsos de te
 4. Validar logo opcional e referências locais, garantindo que não apontem para fora de `assets/`.
 5. Rodar os testes automatizados sem credenciais reais e sem chamadas à internet.
 6. Rodar um scanner de segredos no conteúdo versionado (por exemplo, Gitleaks), bloqueando a publicação se detectar chave/token provável. A verificação precisa cobrir arquivos rastreados e o histórico relevante conforme a configuração adotada.
-7. Somente em push válido na branch `main`, sincronizar os arquivos para o Space `marciomrcunha/pos_ia_chatbot` com a Action oficial `huggingface/hub-sync`, ou mecanismo oficial equivalente escolhido na implementação. O destino padrão é `HF_SPACE_ID=marciomrcunha/pos_ia_chatbot` (valor não secreto); o token de escrita será lido de `secrets.HF_TOKEN`.
+7. Somente em push válido na branch `main`, sincronizar os arquivos para o Space `marciomrcunha/chatbot_IA` com a Action oficial `huggingface/hub-sync`, ou mecanismo oficial equivalente escolhido na implementação. O destino padrão é `HF_SPACE_ID=marciomrcunha/chatbot_IA` (valor não secreto); o token de escrita será lido de `secrets.HF_TOKEN`.
 8. Se qualquer passo anterior falhar, marcar o workflow como falho e não executar sincronização. Após sincronizar, acompanhar o estado de construção do Space e apresentar o resultado/link nos logs do workflow quando disponível.
 
 ### Configuração manual que o responsável precisa fazer
 
-1. Confirmar ou criar o Space público `marciomrcunha/pos_ia_chatbot` na conta Hugging Face indicada, com SDK Gradio.
+1. Confirmar ou criar o Space público `marciomrcunha/chatbot_IA` na conta Hugging Face indicada, com SDK Gradio.
 2. Confirmar os limites/plano de execução atuais do Space Gradio na conta e selecionar hardware permitido.
 3. No Space, abrir **Settings → Secrets** e adicionar uma ou mais chaves, usando os nomes exatos `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. Adicionar somente as chaves que realmente possui; nenhuma vai para o GitHub.
 4. Criar no Hugging Face um token de acesso com escopo de escrita apenas no Space escolhido.
-5. No repositório GitHub, em **Settings → Secrets and variables → Actions**, criar o Secret `HF_TOKEN` com esse token. Se a pipeline usar uma variável para o destino, criar `HF_SPACE_ID` com o valor `marciomrcunha/pos_ia_chatbot`.
+5. No repositório GitHub, em **Settings → Secrets and variables → Actions**, criar o Secret `HF_TOKEN` com esse token. Se a pipeline usar uma variável para o destino, criar `HF_SPACE_ID` com o valor `marciomrcunha/chatbot_IA`.
 6. Confirmar que Actions estão habilitadas para o repositório e que a branch principal se chama `main`, ou ajustar o gatilho para o nome usado.
 7. Enviar o conteúdo do projeto para o GitHub. Fazer primeiro um push/PR de validação; após CI verde, alterações em `main` serão publicadas automaticamente.
 8. Abrir a URL do Space e realizar os testes manuais T4 e T16 com uma chave válida. Para provar fallback real, configurar dois provedores e provocar uma falha controlada no primeiro, sem expor chaves.
