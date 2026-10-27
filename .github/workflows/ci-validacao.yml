@@ -41,3 +41,31 @@ jobs:
           GITLEAKS_CONFIG: .gitleaks.toml
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+
+  publicar-space:
+    name: Publicar no Hugging Face Space
+    needs: validar
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conferir configuração de publicação
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_ID: ${{ vars.HF_SPACE_ID }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::Configure o Secret HF_TOKEN nas configurações do GitHub Actions."
+            exit 1
+          fi
+          if ! [[ "$HF_SPACE_ID" =~ ^[^/]+/[^/]+$ ]]; then
+            echo "::error::Configure a variável HF_SPACE_ID no formato conta/nome-do-space."
+            exit 1
+          fi
+
+      - name: Sincronizar arquivos com o Space
+        uses: huggingface/hub-sync@v0.3.0
+        with:
+          github_repo_id: ${{ github.repository }}
+          huggingface_repo_id: ${{ vars.HF_SPACE_ID }}
+          hf_token: ${{ secrets.HF_TOKEN }}
+          space_sdk: gradio
